@@ -3,6 +3,7 @@
 
 import pytest
 
+from baseprop.cli.hpopt import NO_HYPEROPT, NO_RAY
 from baseprop.cli.main import main
 
 pytestmark = pytest.mark.CLI
@@ -13,6 +14,7 @@ def data_path(data_dir):
     return str(data_dir / "freesolv.csv")
 
 
+@pytest.mark.skipif(NO_RAY or NO_HYPEROPT, reason="Ray and/or Hyperopt not installed")
 def test_nestedCV_GCNN_quick(monkeypatch, data_path, tmp_path):
     args = [
         "baseprop",
@@ -56,6 +58,7 @@ def test_nestedCV_GCNN_quick(monkeypatch, data_path, tmp_path):
         main()
 
 
+@pytest.mark.skipif(NO_RAY or NO_HYPEROPT, reason="Ray and/or Hyperopt not installed")
 def test_nestedCV_DNN_quick(monkeypatch, data_path, tmp_path):
     args = [
         "baseprop",
