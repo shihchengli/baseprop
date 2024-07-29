@@ -5,6 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "baseprop"
 description = "Baseline models for molecular property prediction"
+version = "0.0.1"
 readme = "README.md"
 license = {text = "MIT"}
 classifiers = [
