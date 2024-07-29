@@ -327,22 +327,27 @@ def train_with_splits(config, args, data_splits, logger, output_transform):
         else:
             metrics = None
 
-        encoder_cls = GCN
-        encoder = Factory.build(
-            encoder_cls,
-            n_features=len(train_loader.dataset[0].mg.V[0]),
-            hidden_channels=args.hidden_channels,
-            dropout=args.dropout,
-            num_gcn_layers=args.depth,
-            batch_norm=not args.no_batch_norm,
-            activation=args.activation,
-        )
+        if args.features_only:
+            encoder = None
+            input_dim = 0
+        else:
+            encoder_cls = GCN
+            encoder = Factory.build(
+                encoder_cls,
+                n_features=len(train_loader.dataset[0].mg.V[0]),
+                hidden_channels=args.hidden_channels,
+                dropout=args.dropout,
+                num_gcn_layers=args.depth,
+                batch_norm=not args.no_batch_norm,
+                activation=args.activation,
+            )
+            input_dim = args.hidden_channels
         predictor_cls = PredictorRegistry[args.task_type]
         predictor = Factory.build(
             predictor_cls,
-            input_dim=encoder.hidden_channels + len(len(train_loader.dataset[0].x_d))
+            input_dim=input_dim + len(train_loader.dataset[0].x_d)
             if args.molecule_featurizers
-            else encoder.hidden_channels,
+            else input_dim,
             n_tasks=train_loader.dataset[0].y.shape[0],
             hidden_dim=args.ffn_hidden_dim,
             n_layers=args.ffn_num_layers,
@@ -584,22 +589,27 @@ def main(args: Namespace):
         else:
             metrics = None
 
-        encoder_cls = GCN
-        encoder = Factory.build(
-            encoder_cls,
-            n_features=len(train_loader.dataset[0].mg.V[0]),
-            hidden_channels=args.hidden_channels,
-            dropout=args.dropout,
-            num_gcn_layers=args.depth,
-            batch_norm=not args.no_batch_norm,
-            activation=args.activation,
-        )
+        if args.features_only:
+            encoder = None
+            input_dim = 0
+        else:
+            encoder_cls = GCN
+            encoder = Factory.build(
+                encoder_cls,
+                n_features=len(train_loader.dataset[0].mg.V[0]),
+                hidden_channels=args.hidden_channels,
+                dropout=args.dropout,
+                num_gcn_layers=args.depth,
+                batch_norm=not args.no_batch_norm,
+                activation=args.activation,
+            )
+            input_dim = args.hidden_channels
         predictor_cls = PredictorRegistry[args.task_type]
         predictor = Factory.build(
             predictor_cls,
-            input_dim=encoder.hidden_channels + len(len(train_loader.dataset[0].x_d))
+            input_dim=input_dim + len(train_loader.dataset[0].x_d)
             if args.molecule_featurizers
-            else encoder.hidden_channels,
+            else input_dim,
             n_tasks=train_loader.dataset[0].y.shape[0],
             hidden_dim=args.ffn_hidden_dim,
             n_layers=args.ffn_num_layers,

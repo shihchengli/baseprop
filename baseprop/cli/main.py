@@ -6,9 +6,9 @@ from configargparse import ArgumentParser
 
 from baseprop.cli.conf import LOG_DIR, LOG_LEVELS, NOW
 from baseprop.cli.hpopt import HpoptSubcommand
+from baseprop.cli.nested_cv import NestedCVSubcommand
 from baseprop.cli.predict import PredictSubcommand
 from baseprop.cli.train import TrainSubcommand
-from baseprop.cli.nested_cv import NestedCVSubcommand
 from baseprop.cli.utils import pop_attr
 
 logger = logging.getLogger(__name__)

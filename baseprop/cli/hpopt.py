@@ -339,7 +339,7 @@ def train_with_splits(config, args, data_splits, logger, output_transform):
         predictor_cls = PredictorRegistry[args.task_type]
         predictor = Factory.build(
             predictor_cls,
-            input_dim=input_dim + len(len(train_loader.dataset[0].x_d))
+            input_dim=input_dim + len(train_loader.dataset[0].x_d)
             if args.molecule_featurizers
             else input_dim,
             n_tasks=train_loader.dataset[0].y.shape[0],
@@ -550,7 +550,7 @@ def main(args: Namespace):
     predictor_cls = PredictorRegistry[args.task_type]
     predictor = Factory.build(
         predictor_cls,
-        input_dim=input_dim + len(len(train_loader.dataset[0].x_d))
+        input_dim=input_dim + len(train_loader.dataset[0].x_d)
         if args.molecule_featurizers
         else input_dim,
         n_tasks=train_loader.dataset[0].y.shape[0],
