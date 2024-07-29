@@ -77,18 +77,6 @@ def add_train_args(parser: ArgumentParser) -> ArgumentParser:
         help="Directory where training outputs will be saved. Defaults to 'CURRENT_DIRECTORY/baseprop_training/STEM_OF_INPUT/TIME_STAMP'.",
     )
 
-    transfer_args = parser.add_argument_group("transfer learning args")
-    transfer_args.add_argument(
-        "--model-frzn",
-        help="Path to model checkpoint file to be loaded for overwriting and freezing weights.",
-    )
-    transfer_args.add_argument(
-        "--frzn-ffn-layers",
-        type=int,
-        default=0,
-        help="Overwrites weights for the first n layers of the ffn from checkpoint model (specified checkpoint_frzn), where n is specified in the input. Automatically also freezes mpnn weights.",
-    )
-
     parser.add_argument(
         "--ensemble-size",
         type=int,
@@ -133,9 +121,7 @@ def add_train_args(parser: ArgumentParser) -> ArgumentParser:
 
     train_data_args = parser.add_argument_group("training input data args")
     train_data_args.add_argument(
-        "--target-columns",
-        nargs="+",
-        help="Name of the columns containing target values. By default, uses all columns except the SMILES column and the :code:`ignore_columns`.",
+        "--target-columns", nargs="+", help="Name of the columns containing target values."
     )
 
     train_args = parser.add_argument_group("training args")
