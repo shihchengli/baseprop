@@ -56,10 +56,12 @@ class GCN(nn.Module, HyperparametersMixin):
         x, edge_index = bmgs.V, bmgs.edge_index
 
         # GCN layers
-        for i in range(self.num_gcn_layers):
+        x = self.dropout(x)
+        for i in range(len(self.gcn_layers)):
             layer = self.gcn_layers[i]
             if isinstance(layer, GCNConv):
                 x = layer(x, edge_index)
+                x = self.tau(x)
             else:
                 x = layer(x)
 
