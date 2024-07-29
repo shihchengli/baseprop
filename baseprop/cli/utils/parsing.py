@@ -57,19 +57,12 @@ def make_datapoints(
     if molecule_featurizers is None:
         X_d = [None] * N
     else:
-        molecule_featurizers = [
-            MoleculeFeaturizerRegistry[mf]() for mf in molecule_featurizers
-        ]
+        molecule_featurizers = [MoleculeFeaturizerRegistry[mf]() for mf in molecule_featurizers]
 
         if len(smiss) > 0:
             mol_descriptors = np.hstack(
                 [
-                    np.vstack(
-                        [
-                            np.hstack([mf(mol) for mf in molecule_featurizers])
-                            for mol in mols
-                        ]
-                    )
+                    np.vstack([np.hstack([mf(mol) for mf in molecule_featurizers]) for mol in mols])
                     for mols in molss
                 ]
             )
@@ -77,12 +70,7 @@ def make_datapoints(
 
     mol_data = [
         [
-            MoleculeDatapoint(
-                mol=molss[mol_idx][i],
-                name=smis[i],
-                y=Y[i],
-                x_d=X_d[i],
-            )
+            MoleculeDatapoint(mol=molss[mol_idx][i], name=smis[i], y=Y[i], x_d=X_d[i])
             for i in range(N)
         ]
         for mol_idx, smis in enumerate(smiss)
@@ -109,9 +97,7 @@ def parse_csv(
 
     if target_cols is None:
         target_cols = list(
-            column
-            for column in df.columns
-            if column not in set(input_cols + (splits_col or []))
+            column for column in df.columns if column not in set(input_cols + (splits_col or []))
         )
 
     Y = df[target_cols]
@@ -128,19 +114,9 @@ def build_data_from_files(
     splits_col: str | None,
     **featurization_kwargs: Mapping,
 ) -> list[list[MoleculeDatapoint]]:
-    smiss, Y = parse_csv(
-        p_data,
-        smiles_cols,
-        target_cols,
-        splits_col,
-        no_header_row,
-    )
+    smiss, Y = parse_csv(p_data, smiles_cols, target_cols, splits_col, no_header_row)
 
-    mol_data = make_datapoints(
-        smiss,
-        Y,
-        **featurization_kwargs,
-    )
+    mol_data = make_datapoints(smiss, Y, **featurization_kwargs)
 
     return mol_data
 

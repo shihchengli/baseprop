@@ -14,11 +14,7 @@ from baseprop.utils.registry import ClassRegistry
 class Metric(LossFunction):
     minimize: bool = True
 
-    def forward(
-        self,
-        preds: Tensor,
-        targets: Tensor,
-    ):
+    def forward(self, preds: Tensor, targets: Tensor):
         mask = torch.from_numpy(np.isfinite(targets.cpu().numpy()))
         return self._calc_unreduced_loss(preds, targets)[mask].mean()
 
@@ -51,11 +47,7 @@ class MSEMetric(MSELoss, Metric):
 
 @MetricRegistry.register("rmse")
 class RMSEMetric(MSEMetric):
-    def forward(
-        self,
-        preds: Tensor,
-        targets: Tensor,
-    ):
+    def forward(self, preds: Tensor, targets: Tensor):
         mask = torch.from_numpy(np.isfinite(targets.cpu().numpy()))
         squared_errors = super()._calc_unreduced_loss(preds, targets)
 

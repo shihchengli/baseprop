@@ -1,12 +1,27 @@
 from .encoder import GCN
-from .loss import (BCELoss, CrossEntropyLoss, LossFunction,
-                   LossFunctionRegistry, MSELoss)
-from .metrics import (BCEMetric, BinaryAccuracyMetric, BinaryAUPRCMetric,
-                      BinaryAUROCMetric, BinaryF1Metric, CrossEntropyMetric,
-                      MAEMetric, Metric, MetricRegistry, MSEMetric, R2Metric,
-                      RMSEMetric, ThresholdedMixin)
-from .predictors import (BinaryClassificationFFN, BinaryClassificationFFNBase,
-                         Predictor, PredictorRegistry, RegressionFFN)
+from .loss import BCELoss, CrossEntropyLoss, LossFunction, LossFunctionRegistry, MSELoss
+from .metrics import (
+    BCEMetric,
+    BinaryAccuracyMetric,
+    BinaryAUPRCMetric,
+    BinaryAUROCMetric,
+    BinaryF1Metric,
+    CrossEntropyMetric,
+    MAEMetric,
+    Metric,
+    MetricRegistry,
+    MSEMetric,
+    R2Metric,
+    RMSEMetric,
+    ThresholdedMixin,
+)
+from .predictors import (
+    BinaryClassificationFFN,
+    BinaryClassificationFFNBase,
+    Predictor,
+    PredictorRegistry,
+    RegressionFFN,
+)
 from .transforms import ScaleTransform, UnscaleTransform
 from .utils import Activation
 

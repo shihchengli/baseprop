@@ -10,9 +10,7 @@ MoleculeFeaturizerRegistry = ClassRegistry[VectorFeaturizer[Mol]]()
 
 
 class MorganFeaturizerMixin:
-    def __init__(
-        self, radius: int = 2, length: int = 2048, include_chirality: bool = True
-    ):
+    def __init__(self, radius: int = 2, length: int = 2048, include_chirality: bool = True):
         if radius < 0:
             raise ValueError(f"arg 'radius' must be >= 0! got: {radius}")
 
@@ -36,14 +34,10 @@ class CountFeaturizerMixin:
 
 
 @MoleculeFeaturizerRegistry("morgan_binary")
-class MorganBinaryFeaturizer(
-    MorganFeaturizerMixin, BinaryFeaturizerMixin, VectorFeaturizer[Mol]
-):
+class MorganBinaryFeaturizer(MorganFeaturizerMixin, BinaryFeaturizerMixin, VectorFeaturizer[Mol]):
     pass
 
 
 @MoleculeFeaturizerRegistry("morgan_count")
-class MorganCountFeaturizer(
-    MorganFeaturizerMixin, CountFeaturizerMixin, VectorFeaturizer[Mol]
-):
+class MorganCountFeaturizer(MorganFeaturizerMixin, CountFeaturizerMixin, VectorFeaturizer[Mol]):
     pass

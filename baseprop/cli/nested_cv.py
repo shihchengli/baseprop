@@ -1,26 +1,35 @@
-import logging
-import sys
 from copy import deepcopy
+import logging
 from pathlib import Path
+import sys
 
-import numpy as np
-import torch
 from configargparse import ArgumentParser, Namespace
 from lightning import pytorch as pl
 from lightning.pytorch.callbacks import EarlyStopping
+import numpy as np
+import torch
 
 from baseprop.cli.common import add_common_args
-from baseprop.cli.train import (TrainSubcommand, add_train_args, build_splits,
-                                process_train_args, save_config,
-                                save_smiles_splits, train_model)
+from baseprop.cli.train import (
+    TrainSubcommand,
+    add_train_args,
+    build_splits,
+    process_train_args,
+    save_config,
+    save_smiles_splits,
+    train_model,
+)
 from baseprop.cli.utils.command import Subcommand
-from baseprop.data import (MoleculeDataset, build_dataloader,
-                           make_split_indices, split_data_by_indices)
+from baseprop.data import (
+    MoleculeDataset,
+    build_dataloader,
+    make_split_indices,
+    split_data_by_indices,
+)
 from baseprop.featurizers.atom import get_multi_hot_atom_featurizer
 from baseprop.featurizers.bond import MultiHotBondFeaturizer
 from baseprop.models.model import LitModule
-from baseprop.nn import (GCN, LossFunctionRegistry, MetricRegistry,
-                         PredictorRegistry)
+from baseprop.nn import GCN, LossFunctionRegistry, MetricRegistry, PredictorRegistry
 from baseprop.nn.transforms import UnscaleTransform
 from baseprop.nn.utils import Activation
 from baseprop.utils import Factory
@@ -42,8 +51,12 @@ try:
     from ray import tune
     from ray.air import session
     from ray.train import CheckpointConfig, RunConfig, ScalingConfig
-    from ray.train.lightning import (RayDDPStrategy, RayLightningEnvironment,
-                                     RayTrainReportCallback, prepare_trainer)
+    from ray.train.lightning import (
+        RayDDPStrategy,
+        RayLightningEnvironment,
+        RayTrainReportCallback,
+        prepare_trainer,
+    )
     from ray.train.torch import TorchTrainer
     from ray.tune.schedulers import ASHAScheduler, FIFOScheduler
 
@@ -78,13 +91,7 @@ logger = logging.getLogger(__name__)
 SEARCH_SPACE = DEFAULT_SEARCH_SPACE
 
 SEARCH_PARAM_KEYWORDS_MAP = {
-    "basic": [
-        "depth",
-        "ffn_num_layers",
-        "dropout",
-        "ffn_hidden_dim",
-        "hidden_channels",
-    ],
+    "basic": ["depth", "ffn_num_layers", "dropout", "ffn_hidden_dim", "hidden_channels"],
     "all": list(DEFAULT_SEARCH_SPACE.keys()),
     "lr": ["lr"],
 }
@@ -108,9 +115,7 @@ class HpoptSubcommand(Subcommand):
 
 
 def add_hpopt_args(parser: ArgumentParser) -> ArgumentParser:
-    hpopt_args = parser.add_argument_group(
-        "Baseprop hyperparameter optimization arguments"
-    )
+    hpopt_args = parser.add_argument_group("Baseprop hyperparameter optimization arguments")
 
     hpopt_args.add_argument(
         "--search-parameter-keywords",
@@ -193,8 +198,7 @@ def add_hpopt_args(parser: ArgumentParser) -> ArgumentParser:
     )
 
     raytune_args.add_argument(
-        "--raytune-temp-dir",
-        help="Passed directly to Ray Tune init to control temporary directory",
+        "--raytune-temp-dir", help="Passed directly to Ray Tune init to control temporary directory"
     )
 
     raytune_args.add_argument(
@@ -241,9 +245,7 @@ def process_hpopt_args(args: Namespace) -> Namespace:
 
     search_parameters = set()
 
-    available_search_parameters = list(SEARCH_SPACE.keys()) + list(
-        SEARCH_PARAM_KEYWORDS_MAP.keys()
-    )
+    available_search_parameters = list(SEARCH_SPACE.keys()) + list(SEARCH_PARAM_KEYWORDS_MAP.keys())
 
     for keyword in args.search_parameter_keywords:
         if keyword not in available_search_parameters:
@@ -284,9 +286,7 @@ def train_with_splits(config, args, data_splits, logger, output_transform):
     val_losses = []
     for fold_idx, (train_data, val_data, _) in enumerate(zip(*data_splits)):
         logger.info(f"split {fold_idx}...")
-        atom_featurizer = get_multi_hot_atom_featurizer(
-            args.multi_hot_atom_featurizer_mode
-        )
+        atom_featurizer = get_multi_hot_atom_featurizer(args.multi_hot_atom_featurizer_mode)
         bond_featurizer = MultiHotBondFeaturizer()
 
         train_dset = MoleculeDataset(train_data, atom_featurizer, bond_featurizer)
@@ -294,9 +294,7 @@ def train_with_splits(config, args, data_splits, logger, output_transform):
         if "regression" in args.task_type:
             output_scaler = train_dset.normalize_targets()
             val_dset.normalize_targets(output_scaler)
-            logger.info(
-                f"Train data: mean = {output_scaler.mean_} | std = {output_scaler.scale_}"
-            )
+            logger.info(f"Train data: mean = {output_scaler.mean_} | std = {output_scaler.scale_}")
             output_transform = UnscaleTransform.from_standard_scaler(output_scaler)
         else:
             output_transform = None
@@ -321,9 +319,7 @@ def train_with_splits(config, args, data_splits, logger, output_transform):
 
         # build model
         if args.loss_function is not None:
-            criterion = Factory.build(
-                LossFunctionRegistry[args.loss_function],
-            )
+            criterion = Factory.build(LossFunctionRegistry[args.loss_function])
         else:
             criterion = None
         if args.metrics is not None:
@@ -359,9 +355,7 @@ def train_with_splits(config, args, data_splits, logger, output_transform):
         logger.info(model)
 
         monitor_mode = "min" if model.metrics[0].minimize else "max"
-        logger.debug(
-            f"Evaluation metric: '{model.metrics[0].alias}', mode: '{monitor_mode}'"
-        )
+        logger.debug(f"Evaluation metric: '{model.metrics[0].alias}', mode: '{monitor_mode}'")
 
         patience = args.patience if args.patience is not None else args.epochs
         early_stopping = EarlyStopping("val_loss", patience=patience, mode=monitor_mode)
@@ -398,19 +392,13 @@ def tune_model(args, data_splits, logger, monitor_mode, output_transform):
                 reduction_factor=args.raytune_reduction_factor,
             )
         case _:
-            raise ValueError(
-                f"Invalid trial scheduler! got: {args.raytune_trial_scheduler}."
-            )
+            raise ValueError(f"Invalid trial scheduler! got: {args.raytune_trial_scheduler}.")
 
     resources_per_worker = {}
     if args.raytune_num_cpus and args.raytune_max_concurrent_trials:
-        resources_per_worker["CPU"] = (
-            args.raytune_num_cpus / args.raytune_max_concurrent_trials
-        )
+        resources_per_worker["CPU"] = args.raytune_num_cpus / args.raytune_max_concurrent_trials
     if args.raytune_num_gpus and args.raytune_max_concurrent_trials:
-        resources_per_worker["GPU"] = (
-            args.raytune_num_gpus / args.raytune_max_concurrent_trials
-        )
+        resources_per_worker["GPU"] = args.raytune_num_gpus / args.raytune_max_concurrent_trials
     if not resources_per_worker:
         resources_per_worker = None
 
@@ -438,13 +426,7 @@ def tune_model(args, data_splits, logger, monitor_mode, output_transform):
     )
 
     ray_trainer = TorchTrainer(
-        lambda config: train_with_splits(
-            config,
-            args,
-            data_splits,
-            logger,
-            output_transform,
-        ),
+        lambda config: train_with_splits(config, args, data_splits, logger, output_transform),
         scaling_config=scaling_config,
         run_config=run_config,
     )
@@ -480,9 +462,7 @@ def tune_model(args, data_splits, logger, monitor_mode, output_transform):
 
     tuner = tune.Tuner(
         ray_trainer,
-        param_space={
-            "train_loop_config": build_search_space(args.search_parameter_keywords)
-        },
+        param_space={"train_loop_config": build_search_space(args.search_parameter_keywords)},
         tune_config=tune_config,
     )
 
@@ -520,9 +500,7 @@ def main(args: Namespace):
     )
 
     featurization_kwargs = dict(
-        molecule_featurizers=args.molecule_featurizers,
-        keep_h=args.keep_h,
-        add_h=args.add_h,
+        molecule_featurizers=args.molecule_featurizers, keep_h=args.keep_h, add_h=args.add_h
     )
 
     outer_train_data, outer_val_data, outer_test_data = build_splits(
@@ -545,24 +523,18 @@ def main(args: Namespace):
         outer_train_dset = MoleculeDataset(
             outer_train_data[fold_idx], atom_featurizer, bond_featurizer
         )
-        outer_val_dset = MoleculeDataset(
-            outer_val_data[fold_idx], atom_featurizer, bond_featurizer
-        )
+        outer_val_dset = MoleculeDataset(outer_val_data[fold_idx], atom_featurizer, bond_featurizer)
         outer_test_dset = MoleculeDataset(
             outer_test_data[fold_idx], atom_featurizer, bond_featurizer
         )
 
         if args.save_smiles_splits:
-            save_smiles_splits(
-                args, output_dir, outer_train_dset, outer_val_dset, outer_test_dset
-            )
+            save_smiles_splits(args, output_dir, outer_train_dset, outer_val_dset, outer_test_dset)
 
         if "regression" in args.task_type:
             output_scaler = outer_train_dset.normalize_targets()
             outer_val_dset.normalize_targets(output_scaler)
-            logger.info(
-                f"Train data: mean = {output_scaler.mean_} | std = {output_scaler.scale_}"
-            )
+            logger.info(f"Train data: mean = {output_scaler.mean_} | std = {output_scaler.scale_}")
             output_transform = UnscaleTransform.from_standard_scaler(output_scaler)
         else:
             output_transform = None
@@ -570,11 +542,7 @@ def main(args: Namespace):
         # inner loop
         splitting_mols = [datapoint.mol for datapoint in outer_train_data[fold_idx]]
         train_indices, val_indices, test_indices = make_split_indices(
-            splitting_mols,
-            "CV_NO_VAL",
-            args.split_sizes,
-            args.data_seed,
-            args.num_folds,
+            splitting_mols, "CV_NO_VAL", args.split_sizes, args.data_seed, args.num_folds
         )
         inner_train_data, _, inner_test_data = split_data_by_indices(
             outer_train_data[fold_idx], train_indices, val_indices, test_indices
@@ -608,9 +576,7 @@ def main(args: Namespace):
 
         # build model
         if args.loss_function is not None:
-            criterion = Factory.build(
-                LossFunctionRegistry[args.loss_function],
-            )
+            criterion = Factory.build(LossFunctionRegistry[args.loss_function])
         else:
             criterion = None
         if args.metrics is not None:
@@ -645,9 +611,7 @@ def main(args: Namespace):
         model = LitModule(encoder=encoder, predictor=predictor, metrics=metrics)
         monitor_mode = "min" if model.metrics[0].minimize else "max"
 
-        results = tune_model(
-            args, inner_data_splits, logger, monitor_mode, output_transform
-        )
+        results = tune_model(args, inner_data_splits, logger, monitor_mode, output_transform)
 
         best_result = results.get_best_result()
         best_config = best_result.config["train_loop_config"]
@@ -675,14 +639,7 @@ def main(args: Namespace):
         result_df.to_csv(all_progress_save_path, index=False)
 
         # Use optimized hyperparameters to train on external training set
-        train_model(
-            train_args,
-            train_loader,
-            val_loader,
-            test_loader,
-            output_dir,
-            output_transform,
-        )
+        train_model(train_args, train_loader, val_loader, test_loader, output_dir, output_transform)
 
     ray.shutdown()
 

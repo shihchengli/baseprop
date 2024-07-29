@@ -1,5 +1,5 @@
-import torch.nn as nn
 from lightning.pytorch.core.mixins import HyperparametersMixin
+import torch.nn as nn
 from torch_geometric.nn import BatchNorm, GCNConv
 
 from baseprop.nn.utils import get_activation_function
@@ -46,13 +46,9 @@ class GCN(nn.Module, HyperparametersMixin):
         self.gcn_layers = nn.ModuleList()
         for i in range(num_gcn_layers):
             if i == 0:
-                self.gcn_layers.append(
-                    GCNConv(n_features, hidden_channels, cached=False)
-                )
+                self.gcn_layers.append(GCNConv(n_features, hidden_channels, cached=False))
             else:
-                self.gcn_layers.append(
-                    GCNConv(hidden_channels, hidden_channels, cached=False)
-                )
+                self.gcn_layers.append(GCNConv(hidden_channels, hidden_channels, cached=False))
             if batch_norm:
                 self.gcn_layers.append(BatchNorm(hidden_channels))
 

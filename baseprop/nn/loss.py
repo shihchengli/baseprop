@@ -9,11 +9,7 @@ from baseprop.utils.registry import ClassRegistry
 
 
 class LossFunction(nn.Module):
-    def forward(
-        self,
-        preds: Tensor,
-        targets: Tensor,
-    ):
+    def forward(self, preds: Tensor, targets: Tensor):
         """Calculate the mean loss function value given predicted and target values
 
         Parameters

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Iterable
 
-import torch
 from lightning import pytorch as pl
+import torch
 from torch import Tensor, distributed, nn, optim
 from torch_geometric.nn import global_mean_pool
 
@@ -26,16 +26,10 @@ class LitModule(pl.LightningModule):
         self.save_hyperparameters(ignore=["X_d_transform", "encoder", "predictor"])
         self.hparams["X_d_transform"] = X_d_transform
         self.hparams["encoder"] = encoder
-        self.hparams.update(
-            {
-                "predictor": predictor.hparams,
-            }
-        )
+        self.hparams.update({"predictor": predictor.hparams})
         self.encoder = encoder
         self.predictor = predictor
-        self.X_d_transform = (
-            X_d_transform if X_d_transform is not None else nn.Identity()
-        )
+        self.X_d_transform = X_d_transform if X_d_transform is not None else nn.Identity()
         self.metrics = metrics if metrics else [self.predictor._T_default_metric()]
         self.lr = lr
 
@@ -57,11 +51,7 @@ class LitModule(pl.LightningModule):
             optimizer, mode="min", factor=0.7, patience=5, min_lr=self.lr / 100
         )
 
-        return {
-            "optimizer": optimizer,
-            "lr_scheduler": scheduler,
-            "monitor": "val_loss",
-        }
+        return {"optimizer": optimizer, "lr_scheduler": scheduler, "monitor": "val_loss"}
 
     def forward(self, bmg: BatchMolGraph, X_d: Tensor | None = None) -> Tensor:
         """Generate predictions for the input molecules/reactions"""
@@ -108,9 +98,7 @@ class LitModule(pl.LightningModule):
 
     def test_step(self, batch: TrainingBatch, batch_idx: int = 0):
         losses = self._evaluate_batch(batch)
-        metric2loss = {
-            f"batch_averaged_test/{m.alias}": l for m, l in zip(self.metrics, losses)
-        }
+        metric2loss = {f"batch_averaged_test/{m.alias}": l for m, l in zip(self.metrics, losses)}
 
         self.log_dict(metric2loss, batch_size=len(batch[0]))
 
@@ -120,9 +108,7 @@ class LitModule(pl.LightningModule):
 
         return [metric(preds, targets) for metric in self.metrics]
 
-    def predict_step(
-        self, batch: TrainingBatch, batch_idx: int, dataloader_idx: int = 0
-    ) -> Tensor:
+    def predict_step(self, batch: TrainingBatch, batch_idx: int, dataloader_idx: int = 0) -> Tensor:
         """Return the predictions of the input batch
 
         Parameters
@@ -160,12 +146,7 @@ class LitModule(pl.LightningModule):
 
     @classmethod
     def load_from_checkpoint(
-        cls,
-        checkpoint_path,
-        map_location=None,
-        hparams_file=None,
-        strict=True,
-        **kwargs,
+        cls, checkpoint_path, map_location=None, hparams_file=None, strict=True, **kwargs
     ) -> LitModule:
         kwargs = cls.load_submodules(checkpoint_path, **kwargs)
         return super().load_from_checkpoint(
@@ -180,9 +161,7 @@ class LitModule(pl.LightningModule):
             hparams = d["hyper_parameters"]
             state_dict = d["state_dict"]
         except KeyError:
-            raise KeyError(
-                f"Could not find hyper parameters and/or state dict in {model_path}. "
-            )
+            raise KeyError(f"Could not find hyper parameters and/or state dict in {model_path}. ")
 
         for key in ["predictor"]:
             hparam_kwargs = hparams[key]

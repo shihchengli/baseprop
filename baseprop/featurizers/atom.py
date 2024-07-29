@@ -173,9 +173,7 @@ class AtomFeatureMode(EnumMapping):
     V2 = auto()
 
 
-def get_multi_hot_atom_featurizer(
-    mode: str | AtomFeatureMode,
-) -> MultiHotAtomFeaturizer:
+def get_multi_hot_atom_featurizer(mode: str | AtomFeatureMode) -> MultiHotAtomFeaturizer:
     """Build the corresponding multi-hot atom featurizer."""
     match AtomFeatureMode.get(mode):
         case AtomFeatureMode.V1:

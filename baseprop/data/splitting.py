@@ -1,11 +1,10 @@
-import copy
 from collections.abc import Iterable, Sequence
+import copy
 from enum import auto
 
-import numpy as np
 from astartes import train_test_split, train_val_test_split
-from astartes.molecules import (train_test_split_molecules,
-                                train_val_test_split_molecules)
+from astartes.molecules import train_test_split_molecules, train_val_test_split_molecules
+import numpy as np
 from rdkit import Chem
 
 from baseprop.data.datapoints import MoleculeDatapoint
@@ -97,9 +96,7 @@ def make_split_indices(
             train, val, test = [], [], []
             random = np.random.default_rng(seed)
 
-            indices = np.tile(np.arange(num_folds), 1 + n_datapoints // num_folds)[
-                :n_datapoints
-            ]
+            indices = np.tile(np.arange(num_folds), 1 + n_datapoints // num_folds)[:n_datapoints]
             random.shuffle(indices)
 
             for fold_idx in range(num_folds):
@@ -109,9 +106,7 @@ def make_split_indices(
                 if split != SplitType.CV_NO_VAL:
                     i_val = np.where(indices == val_index)[0]
                     i_test = np.where(indices == test_index)[0]
-                    i_train = np.where(
-                        (indices != val_index) & (indices != test_index)
-                    )[0]
+                    i_train = np.where((indices != val_index) & (indices != test_index))[0]
                 else:
                     i_val = []
                     i_test = np.where(indices == test_index)[0]
@@ -134,9 +129,7 @@ def make_split_indices(
             train, val, test = _unpack_astartes_result(result, include_val)
 
         case SplitType.RANDOM:
-            result = split_fun(
-                np.arange(n_datapoints), sampler="random", **astartes_kwargs
-            )
+            result = split_fun(np.arange(n_datapoints), sampler="random", **astartes_kwargs)
             train, val, test = _unpack_astartes_result(result, include_val)
 
         case _:
@@ -188,14 +181,10 @@ def split_data_by_indices(
         else None
     )
     val_mols = (
-        [[data[idx] for idx in idxs] for idxs in val_indices]
-        if val_indices is not None
-        else None
+        [[data[idx] for idx in idxs] for idxs in val_indices] if val_indices is not None else None
     )
     test_mols = (
-        [[data[idx] for idx in idxs] for idxs in test_indices]
-        if test_indices is not None
-        else None
+        [[data[idx] for idx in idxs] for idxs in test_indices] if test_indices is not None else None
     )
 
     return train_mols, val_mols, test_mols

@@ -95,19 +95,10 @@ class _FFNPredictorBase(Predictor, HyperparametersMixin):
         self.hparams["cls"] = self.__class__
 
         self.ffn = MLP(
-            input_dim,
-            hidden_dim,
-            n_tasks * self.n_targets,
-            n_layers,
-            dropout,
-            activation,
+            input_dim, hidden_dim, n_tasks * self.n_targets, n_layers, dropout, activation
         )
-        self.criterion = criterion or Factory.build(
-            self._T_default_criterion, threshold=threshold
-        )
-        self.output_transform = (
-            output_transform if output_transform is not None else nn.Identity()
-        )
+        self.criterion = criterion or Factory.build(self._T_default_criterion, threshold=threshold)
+        self.output_transform = output_transform if output_transform is not None else nn.Identity()
         self.n_tasks = n_tasks
 
     @property

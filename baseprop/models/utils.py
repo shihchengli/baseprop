@@ -6,9 +6,7 @@ from baseprop.models.model import LitModule
 
 
 def save_model(path: PathLike, model: LitModule) -> None:
-    torch.save(
-        {"hyper_parameters": model.hparams, "state_dict": model.state_dict()}, path
-    )
+    torch.save({"hyper_parameters": model.hparams, "state_dict": model.state_dict()}, path)
 
 
 def load_model(path: PathLike) -> LitModule:

@@ -52,9 +52,7 @@ def make_mol(smi: str, keep_h: bool, add_h: bool) -> Chem.Mol:
     if keep_h:
         mol = Chem.MolFromSmiles(smi, sanitize=False)
         Chem.SanitizeMol(
-            mol,
-            sanitizeOps=Chem.SanitizeFlags.SANITIZE_ALL
-            ^ Chem.SanitizeFlags.SANITIZE_ADJUSTHS,
+            mol, sanitizeOps=Chem.SanitizeFlags.SANITIZE_ALL ^ Chem.SanitizeFlags.SANITIZE_ADJUSTHS
         )
     else:
         mol = Chem.MolFromSmiles(smi)

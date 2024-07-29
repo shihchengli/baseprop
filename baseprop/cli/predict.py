@@ -1,12 +1,12 @@
-import logging
-import sys
 from argparse import ArgumentError, ArgumentParser, Namespace
+import logging
 from pathlib import Path
+import sys
 from typing import Iterator
 
+from lightning import pytorch as pl
 import pandas as pd
 import torch
-from lightning import pytorch as pl
 
 from baseprop import data
 from baseprop.cli.common import add_common_args
@@ -74,15 +74,13 @@ def add_predict_args(parser: ArgumentParser) -> ArgumentParser:
 def process_predict_args(args: Namespace) -> Namespace:
     if args.test_path.suffix not in [".csv"]:
         raise ArgumentError(
-            argument=None,
-            message=f"Input data must be a CSV file. Got {args.test_path}",
+            argument=None, message=f"Input data must be a CSV file. Got {args.test_path}"
         )
     if args.output is None:
         args.output = args.test_path.parent / (args.test_path.stem + "_preds.csv")
     if args.output.suffix not in [".csv", ".pkl"]:
         raise ArgumentError(
-            argument=None,
-            message=f"Output must be a CSV or Pickle file. Got {args.output}",
+            argument=None, message=f"Output must be a CSV or Pickle file. Got {args.output}"
         )
     return args
 
@@ -104,9 +102,7 @@ def find_models(model_paths: list[Path]):
     return collected_model_paths
 
 
-def make_prediction_for_models(
-    args: Namespace, model_paths: Iterator[Path], output_path: Path
-):
+def make_prediction_for_models(args: Namespace, model_paths: Iterator[Path], output_path: Path):
     model = load_model(model_paths[0])
     format_kwargs = dict(
         no_header_row=args.no_header_row,
@@ -115,25 +111,17 @@ def make_prediction_for_models(
         splits_col=[],
     )
     featurization_kwargs = dict(
-        molecule_featurizers=args.molecule_featurizers,
-        keep_h=args.keep_h,
-        add_h=args.add_h,
+        molecule_featurizers=args.molecule_featurizers, keep_h=args.keep_h, add_h=args.add_h
     )
 
-    test_data = build_data_from_files(
-        args.test_path,
-        **format_kwargs,
-        **featurization_kwargs,
-    )
+    test_data = build_data_from_files(args.test_path, **format_kwargs, **featurization_kwargs)
     logger.info(f"test size: {len(test_data)}")
 
     atom_featurizer = get_multi_hot_atom_featurizer("V2")
     bond_featurizer = MultiHotBondFeaturizer()
 
     test_dset = MoleculeDataset(test_data, atom_featurizer, bond_featurizer)
-    test_loader = data.build_dataloader(
-        test_dset, args.batch_size, args.num_workers, shuffle=False
-    )
+    test_loader = data.build_dataloader(test_dset, args.batch_size, args.num_workers, shuffle=False)
 
     individual_preds = []
     for model_path in model_paths:
@@ -176,9 +164,7 @@ def make_prediction_for_models(
     if len(model_paths) > 1:
         individual_preds = torch.concat(individual_preds, 1)
         target_columns = [
-            f"{col}_model_{i}"
-            for i in range(len(model_paths))
-            for col in target_columns
+            f"{col}_model_{i}" for i in range(len(model_paths)) for col in target_columns
         ]
 
         df_test = pd.read_csv(args.test_path)

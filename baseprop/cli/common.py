@@ -1,5 +1,5 @@
-import logging
 from argparse import ArgumentParser
+import logging
 
 from baseprop.cli.utils import LookupAction
 from baseprop.cli.utils.args import uppercase
@@ -31,14 +31,10 @@ def add_common_args(parser: ArgumentParser) -> ArgumentParser:
         help="""Number of workers for parallel data loading (0 means sequential).
 Warning: setting num_workers>0 can cause hangs on Windows and MacOS.""",
     )
-    dataloader_args.add_argument(
-        "-b", "--batch-size", type=int, default=64, help="Batch size."
-    )
+    dataloader_args.add_argument("-b", "--batch-size", type=int, default=64, help="Batch size.")
 
     parser.add_argument(
-        "--accelerator",
-        default="auto",
-        help="Passed directly to the lightning Trainer().",
+        "--accelerator", default="auto", help="Passed directly to the lightning Trainer()."
     )
     parser.add_argument(
         "--devices",
@@ -62,9 +58,7 @@ Warning: setting num_workers>0 can cause hangs on Windows and MacOS.""",
         help="Whether hydrogens explicitly specified in input should be kept in the mol graph.",
     )
     featurization_args.add_argument(
-        "--add-h",
-        action="store_true",
-        help="Whether hydrogens should be added to the mol graph.",
+        "--add-h", action="store_true", help="Whether hydrogens should be added to the mol graph."
     )
     featurization_args.add_argument(
         "--molecule-featurizers",

@@ -47,9 +47,7 @@ class MultiHotBondFeaturizer(VectorFeaturizer[Bond]):
     """
 
     def __init__(
-        self,
-        bond_types: Sequence[BondType] | None = None,
-        stereos: Sequence[int] | None = None,
+        self, bond_types: Sequence[BondType] | None = None, stereos: Sequence[int] | None = None
     ):
         self.bond_types = bond_types or [
             BondType.SINGLE,
