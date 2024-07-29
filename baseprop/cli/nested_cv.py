@@ -97,9 +97,9 @@ SEARCH_PARAM_KEYWORDS_MAP = {
 }
 
 
-class HpoptSubcommand(Subcommand):
-    COMMAND = "hpopt"
-    HELP = "perform hyperparameter optimization on the given task"
+class NestedCVSubcommand(Subcommand):
+    COMMAND = "nestedCV"
+    HELP = "perform nested cross-validation on the given task"
 
     @classmethod
     def add_args(cls, parser: ArgumentParser) -> ArgumentParser:
@@ -646,8 +646,8 @@ def main(args: Namespace):
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser = HpoptSubcommand.add_args(parser)
+    parser = NestedCVSubcommand.add_args(parser)
 
     logging.basicConfig(stream=sys.stdout, level=logging.DEBUG, force=True)
     args = parser.parse_args()
-    HpoptSubcommand.func(args)
+    NestedCVSubcommand.func(args)
