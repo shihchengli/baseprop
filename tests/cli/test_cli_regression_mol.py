@@ -1,5 +1,4 @@
-"""This tests the CLI functionality of training and predicting a regression model on a single smilesecule.
-"""
+"""This tests the CLI functionality of training and predicting a regression model on a single smilese molecule."""
 
 import pytest
 
