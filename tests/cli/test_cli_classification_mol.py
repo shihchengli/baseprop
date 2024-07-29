@@ -54,6 +54,8 @@ def test_train_predict_quick(monkeypatch, data_path, tmp_path):
         "cpu",
         "--model-path",
         str(tmp_path / "model_0/best.pt"),
+        "--preds-path",
+        str(tmp_path / "model_0/preds.csv"),
     ]
 
     with monkeypatch.context() as m:
