@@ -43,6 +43,7 @@ DEFAULT_SEARCH_SPACE = {
 try:
     import ray
     from ray import tune
+    from ray.air import session
     from ray.train import CheckpointConfig, RunConfig, ScalingConfig
     from ray.train.lightning import (
         RayDDPStrategy,
@@ -274,79 +275,112 @@ def update_args_with_config(args: Namespace, config: dict) -> Namespace:
     return args
 
 
-def train_model(config, args, train_dset, val_dset, logger, output_transform):
+def train_with_splits(config, args, data_splits, logger, output_transform):
     args = update_args_with_config(args, config)
+    val_losses = []
+    for fold_idx, (train_data, val_data, _) in enumerate(zip(*data_splits)):
+        logger.info(f"split {fold_idx}...")
+        atom_featurizer = get_multi_hot_atom_featurizer(args.multi_hot_atom_featurizer_mode)
+        bond_featurizer = MultiHotBondFeaturizer()
 
-    train_loader = build_dataloader(
-        dataset=train_dset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers
-    )
+        train_dset = MoleculeDataset(train_data, atom_featurizer, bond_featurizer)
+        val_dset = MoleculeDataset(val_data, atom_featurizer, bond_featurizer)
+        if "regression" in args.task_type:
+            output_scaler = train_dset.normalize_targets()
+            val_dset.normalize_targets(output_scaler)
+            logger.info(f"Train data: mean = {output_scaler.mean_} | std = {output_scaler.scale_}")
+            output_transform = UnscaleTransform.from_standard_scaler(output_scaler)
+        else:
+            output_transform = None
 
-    val_loader = build_dataloader(
-        dataset=val_dset, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers
-    )
+        train_loader = build_dataloader(
+            dataset=train_dset,
+            batch_size=args.batch_size,
+            shuffle=True,
+            num_workers=args.num_workers,
+        )
 
-    seed = args.pytorch_seed if args.pytorch_seed is not None else torch.seed()
+        val_loader = build_dataloader(
+            dataset=val_dset,
+            batch_size=args.batch_size,
+            shuffle=False,
+            num_workers=args.num_workers,
+        )
 
-    torch.manual_seed(seed)
+        seed = args.pytorch_seed if args.pytorch_seed is not None else torch.seed()
 
-    # build model
-    if args.loss_function is not None:
-        criterion = Factory.build(LossFunctionRegistry[args.loss_function])
-    else:
-        criterion = None
-    if args.metrics is not None:
-        metrics = [Factory.build(MetricRegistry[metric]) for metric in args.metrics]
-    else:
-        metrics = None
+        torch.manual_seed(seed)
 
-    encoder_cls = GCN
-    encoder = Factory.build(
-        encoder_cls,
-        n_features=len(train_loader.dataset[0].mg.V[0]),
-        hidden_channels=args.hidden_channels,
-        dropout=args.dropout,
-        num_gcn_layers=args.depth,
-        batch_norm=not args.no_batch_norm,
-        activation=args.activation,
-    )
-    predictor_cls = PredictorRegistry[args.task_type]
-    predictor = Factory.build(
-        predictor_cls,
-        input_dim=encoder.hidden_channels + len(len(train_loader.dataset[0].x_d))
-        if args.molecule_featurizers
-        else encoder.hidden_channels,
-        n_tasks=train_loader.dataset[0].y.shape[0],
-        hidden_dim=args.ffn_hidden_dim,
-        n_layers=args.ffn_num_layers,
-        dropout=args.dropout,
-        activation=args.activation,
-        criterion=criterion,
-        output_transform=output_transform,
-    )
-    model = LitModule(encoder=encoder, predictor=predictor, metrics=metrics)
-    logger.info(model)
+        # build model
+        if args.loss_function is not None:
+            criterion = Factory.build(LossFunctionRegistry[args.loss_function])
+        else:
+            criterion = None
+        if args.metrics is not None:
+            metrics = [Factory.build(MetricRegistry[metric]) for metric in args.metrics]
+        else:
+            metrics = None
 
-    monitor_mode = "min" if model.metrics[0].minimize else "max"
-    logger.debug(f"Evaluation metric: '{model.metrics[0].alias}', mode: '{monitor_mode}'")
+        if args.features_only:
+            encoder = None
+            input_dim = 0
+        else:
+            encoder_cls = GCN
+            encoder = Factory.build(
+                encoder_cls,
+                n_features=len(train_loader.dataset[0].mg.V[0]),
+                hidden_channels=args.hidden_channels,
+                dropout=args.dropout,
+                num_gcn_layers=args.depth,
+                batch_norm=not args.no_batch_norm,
+                activation=args.activation,
+            )
+            input_dim = args.hidden_channels
+        predictor_cls = PredictorRegistry[args.task_type]
+        predictor = Factory.build(
+            predictor_cls,
+            input_dim=input_dim + len(len(train_loader.dataset[0].x_d))
+            if args.molecule_featurizers
+            else input_dim,
+            n_tasks=train_loader.dataset[0].y.shape[0],
+            hidden_dim=args.ffn_hidden_dim,
+            n_layers=args.ffn_num_layers,
+            dropout=args.dropout,
+            activation=args.activation,
+            criterion=criterion,
+            output_transform=output_transform,
+        )
+        model = LitModule(encoder=encoder, predictor=predictor, metrics=metrics)
+        logger.info(model)
 
-    patience = args.patience if args.patience is not None else args.epochs
-    early_stopping = EarlyStopping("val_loss", patience=patience, mode=monitor_mode)
+        monitor_mode = "min" if model.metrics[0].minimize else "max"
+        logger.debug(f"Evaluation metric: '{model.metrics[0].alias}', mode: '{monitor_mode}'")
 
-    trainer = pl.Trainer(
-        accelerator=args.accelerator,
-        devices=args.devices,
-        max_epochs=args.epochs,
-        gradient_clip_val=args.grad_clip,
-        strategy=RayDDPStrategy(),
-        callbacks=[RayTrainReportCallback(), early_stopping],
-        plugins=[RayLightningEnvironment()],
-        deterministic=args.pytorch_seed is not None,
-    )
-    trainer = prepare_trainer(trainer)
-    trainer.fit(model, train_loader, val_loader)
+        patience = args.patience if args.patience is not None else args.epochs
+        early_stopping = EarlyStopping("val_loss", patience=patience, mode=monitor_mode)
+
+        trainer = pl.Trainer(
+            accelerator=args.accelerator,
+            devices=args.devices,
+            max_epochs=args.epochs,
+            gradient_clip_val=args.grad_clip,
+            strategy=RayDDPStrategy(),
+            callbacks=[RayTrainReportCallback(), early_stopping],
+            plugins=[RayLightningEnvironment()],
+            deterministic=args.pytorch_seed is not None,
+        )
+        trainer = prepare_trainer(trainer)
+        trainer.fit(model, train_loader, val_loader)
+        val_loss = trainer.callback_metrics["val_loss"].item()
+        logger.info(f"Split {fold_idx}/{len(data_splits[0])}: val_loss = {val_loss}")
+        val_losses.append(val_loss)
+
+    avg_val_loss = np.mean(val_losses)
+    logger.info(f"Average val_loss over split {fold_idx}: {avg_val_loss}")
+    session.report({"val_loss": avg_val_loss})
 
 
-def tune_model(args, train_dset, val_dset, logger, monitor_mode, output_transform):
+def tune_model(args, data_splits, logger, monitor_mode, output_transform):
     match args.raytune_trial_scheduler:
         case "FIFO":
             scheduler = FIFOScheduler()
@@ -391,7 +425,7 @@ def tune_model(args, train_dset, val_dset, logger, monitor_mode, output_transfor
     )
 
     ray_trainer = TorchTrainer(
-        lambda config: train_model(config, args, train_dset, val_dset, logger, output_transform),
+        lambda config: train_with_splits(config, args, data_splits, logger, output_transform),
         scaling_config=scaling_config,
         run_config=run_config,
     )
@@ -468,13 +502,13 @@ def main(args: Namespace):
         molecule_featurizers=args.molecule_featurizers, keep_h=args.keep_h, add_h=args.add_h
     )
 
-    train_data, val_data, _ = build_splits(args, format_kwargs, featurization_kwargs)
+    data_splits = build_splits(args, format_kwargs, featurization_kwargs)
 
     atom_featurizer = get_multi_hot_atom_featurizer(args.multi_hot_atom_featurizer_mode)
     bond_featurizer = MultiHotBondFeaturizer()
 
-    train_dset = MoleculeDataset(train_data[0], atom_featurizer, bond_featurizer)
-    val_dset = MoleculeDataset(val_data[0], atom_featurizer, bond_featurizer)
+    train_dset = MoleculeDataset(data_splits[0][0], atom_featurizer, bond_featurizer)
+    val_dset = MoleculeDataset(data_splits[0][0], atom_featurizer, bond_featurizer)
 
     if "regression" in args.task_type:
         output_scaler = train_dset.normalize_targets()
@@ -498,22 +532,27 @@ def main(args: Namespace):
     else:
         metrics = None
 
-    encoder_cls = GCN
-    encoder = Factory.build(
-        encoder_cls,
-        n_features=len(train_loader.dataset[0].mg.V[0]),
-        hidden_channels=args.hidden_channels,
-        dropout=args.dropout,
-        num_gcn_layers=args.depth,
-        batch_norm=not args.no_batch_norm,
-        activation=args.activation,
-    )
+    if args.features_only:
+        encoder = None
+        input_dim = 0
+    else:
+        encoder_cls = GCN
+        encoder = Factory.build(
+            encoder_cls,
+            n_features=len(train_loader.dataset[0].mg.V[0]),
+            hidden_channels=args.hidden_channels,
+            dropout=args.dropout,
+            num_gcn_layers=args.depth,
+            batch_norm=not args.no_batch_norm,
+            activation=args.activation,
+        )
+        input_dim = args.hidden_channels
     predictor_cls = PredictorRegistry[args.task_type]
     predictor = Factory.build(
         predictor_cls,
-        input_dim=encoder.hidden_channels + len(len(train_loader.dataset[0].x_d))
+        input_dim=input_dim + len(len(train_loader.dataset[0].x_d))
         if args.molecule_featurizers
-        else encoder.hidden_channels,
+        else input_dim,
         n_tasks=train_loader.dataset[0].y.shape[0],
         hidden_dim=args.ffn_hidden_dim,
         n_layers=args.ffn_num_layers,
@@ -525,7 +564,7 @@ def main(args: Namespace):
     model = LitModule(encoder=encoder, predictor=predictor, metrics=metrics)
     monitor_mode = "min" if model.metrics[0].minimize else "max"
 
-    results = tune_model(args, train_dset, val_dset, logger, monitor_mode, output_transform)
+    results = tune_model(args, data_splits, logger, monitor_mode, output_transform)
 
     best_result = results.get_best_result()
     best_config = best_result.config["train_loop_config"]
