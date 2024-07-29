@@ -106,7 +106,7 @@ jobs:
   #   # only run if the tests pass
   #   needs: [test]
   #   # run only on pushes to main on baseprop
-  #   if:  ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'shihchengli/Baseprop'}}
+  #   if:  ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'shihchengli/baseprop'}}
   #   steps:
   #     - uses: actions/checkout@master
   #     - name: Set up Python 3.11
@@ -142,7 +142,7 @@ jobs:
   #   # only run if the tests pass
   #   needs: [test]
   #   # run only on pushes to main on baseprop
-  #   if:  ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'shihchengli/Baseprop'}}
+  #   if:  ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'shihchengli/baseprop'}}
   #   steps:
   #     - name: Set up QEMU
   #       uses: docker/setup-qemu-action@v2
@@ -161,4 +161,4 @@ jobs:
   #       uses: docker/build-push-action@v4
   #       with:
   #         push: true
-  #         tags: shihchengli/Baseprop:latest
+  #         tags: shihchengli/baseprop:latest
